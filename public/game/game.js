@@ -121,12 +121,24 @@ var COLORS = [
 // Keep track of our socket connection
 var socket;
 
+var bounds;
+var ground;
+
 // Keep track of playerSprites throught their sprite
-var playerSprites = [];
+var playerSprites;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
     background(51);
+
+    playerSprites = new Group();
+
+    ground = createSprite(width / 2, height, width, 2);
+    ground.shapeColor = color(20, 200, 20);
+    ground.immovable = true;
+
+    bounds = new Group();
+    bounds.add(ground);
 
     // Start a socket connection to the server
     // Some day we would run this server somewhere else
@@ -144,7 +156,7 @@ function setup() {
             sprite.label = playerId;
 
             // Store the sprite to use it after
-            playerSprites.push(sprite);
+            playerSprites.add(sprite);
         }
     );
 
@@ -162,6 +174,10 @@ function windowResized() {
 function draw() {
     background(51);
     drawSprites();
+
+    console.log(" playerSprites.length =" + playerSprites.length);
+
+    playerSprites.bounce(bounds);
 }
 
 function keyPressed() {
@@ -186,8 +202,7 @@ function onPlayerMoved(data) {
     console.log("data =" + data.id + ", key =" + data.key);
     var playerSprite = getSpriteForPlayerId(data.id);
     if (playerSprite !== undefined) {
-        console.log("gg");
-        playerSprite.velocity = 1.5;
+        playerSprite.velocity.y = 1.5;
         redraw();
     }
 }
