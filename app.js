@@ -31,25 +31,27 @@ module.exports = app;
 
 server.listen(8080);
 
-// Quand un client se connecte, on le note dans la console
+// New player connected !
 io.sockets.on('connection', function (socket) {
-    console.log("Un client est connecté ! id = [" + socket.id + "]");
+    console.log("Client has connected! id = [" + socket.id + "]");
 
-    // When this user emits, client side: socket.emit('otherevent',some data);
-    socket.on('mouse',
-        function (data) {
-            // Data comes in as whatever was sent, including objects
-            console.log("Received: 'mouse' " + data.x + " " + data.y);
+    // socket.broadcast.emit = everyone but him
+    // io.sockets.emit = everyone and him
+    io.sockets.emit('player_connected', socket.id);
 
-            // Send it to all other clients
-            socket.broadcast.emit('mouse', data);
-
-            // This is a way to send to everyone including sender
-            // io.sockets.emit('message', "this goes to everyone");
-
-        }
-    );
     socket.on('disconnect', function () {
-        console.log("Client has disconnected! id = [" + socket.id + "]");
-    })
+        onPlayerDisconnected(io, socket.id);
+    }).on('player_moved', function (data) {
+        onPlayerMoved(io, socket.id, data);
+    });
 });
+
+function onPlayerDisconnected(io, socketId) {
+    io.sockets.emit('player_disconnected', socketId);
+
+    console.log("Client has disconnected! id = [" + socketId + "]");
+}
+
+function onPlayerMoved(io, socketId, data) {
+    io.sockets.emit('player_moved', {id: socketId, key: data});
+}
