@@ -14,6 +14,9 @@ var playerSprites;
 // Cache the user's sprite for performance
 var mySprite;
 
+// User just used keyboard
+var iMoved;
+
 // Informations about localtick
 var tickCount = 0;
 
@@ -72,6 +75,8 @@ function draw() {
 
 function keyPressed() {
     if (mySprite !== undefined) {
+        iMoved = true;
+
         if (keyCode === UP_ARROW) {
             mySprite.velocity.y = -1.5;
         } else if (keyCode === DOWN_ARROW) {
@@ -132,9 +137,26 @@ function refresh(playerList) {
             var playerSprite = playerSprites[j];
             if (playerSprite.label === player.id) {
                 // We found the sprite related to the player, move it !
-                playerSprite.position.x = player.xPos;
-                playerSprite.position.y = player.yPos;
-                playerSprite.setVelocity(player.xVelocity, player.yVelocity);
+                if (!iMoved) {
+                    if (playerSprite.velocity.x > 0) {
+                        if ((playerSprite.position.x + (playerSprite.velocity.x * 10) < player.xPos // We walk to the right but the internet tells us to go even further (more than expected)
+                            || playerSprite.position.x > player.xPos + (playerSprite.velocity.x * 10))) { // We walf to the right but the internet tells us we go too fast
+                            playerSprite.position.x = player.xPos;
+                            playerSprite.position.y = player.yPos;
+                        }
+                    } else if (playerSprite.velocity.x < 0) {
+                        if ((playerSprite.position.x + (playerSprite.velocity.x * 10) > player.xPos // We walk to the left but the internet tells us to go even further (more than expected)
+                            || playerSprite.position.x < player.xPos + (playerSprite.velocity.x * 10))) {
+                            playerSprite.position.x = player.xPos;
+                            playerSprite.position.y = player.yPos;
+                        }
+                    } else {
+                        playerSprite.position.x = player.xPos;
+                        playerSprite.position.y = player.yPos;
+                    }
+
+                    playerSprite.setVelocity(player.xVelocity, player.yVelocity);
+                }
 
                 found = true;
 
