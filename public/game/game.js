@@ -11,10 +11,26 @@ var ground; // Sprite for the ground
 // Keep track of playerSprites throught their sprite
 var playerSprites;
 
+// Cache the user's sprite for performance
+var mySprite;
+
+// Informations about localtick
+var tickCount = 0;
+
+// Informations about servertick
+var refreshCountProgress = 0;
+var refreshCountFinal = null;
+
+// Informations about FPS
+var fpsCountProgress = 0;
+var fpsCountFinal = null;
+
 function setup() {
     createCanvas(GAME_WIDTH, GAME_HEIGHT);
     background(51);
     frameRate(60);
+
+    setInterval(onTick, 100);
 
     playerSprites = new Group();
 
@@ -32,7 +48,6 @@ function setup() {
     // Player connected : make it appear on screen
     socket.on('player_connected', onPlayerConnected);
     socket.on('player_disconnected', onPlayerDisconnected);
-    socket.on('player_moved', onPlayerMoved);
     socket.on('refresh', refresh);
 }
 
@@ -42,18 +57,54 @@ function windowResized() {
 }
 
 function draw() {
+    fpsCountProgress++;
     background(51);
     drawSprites();
 
     playerSprites.bounce(bounds);
+
+    if (refreshCountFinal !== null) {
+        fill(255);
+        text(refreshCountFinal + "tick/s", 2, 12);
+        text(fpsCountFinal + "FPS", 2, 25);
+    }
 }
 
 function keyPressed() {
-    if (keyCode === UP_ARROW || keyCode === DOWN_ARROW || keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW) {
-        socket.emit("player_moved", keyCode);
-        return true;
-    } else {
-        return false; // ???
+    if (mySprite !== undefined) {
+        if (keyCode === UP_ARROW) {
+            mySprite.velocity.y = -1.5;
+        } else if (keyCode === DOWN_ARROW) {
+            mySprite.velocity.y = 1.5;
+        } else if (keyCode === LEFT_ARROW) {
+            mySprite.velocity.x = -1.5;
+        } else if (keyCode === RIGHT_ARROW) {
+            mySprite.velocity.x = 1.5;
+        }
+    }
+
+    return 0;
+}
+
+function onTick() {
+    tickCount++;
+
+    // Refresh informations once a second
+    if (tickCount % 10 === 0) {
+        refreshCountFinal = refreshCountProgress;
+        refreshCountProgress = 0;
+
+        fpsCountFinal = fpsCountProgress;
+        fpsCountProgress = 0;
+    }
+
+    update();
+}
+
+function update() {
+    if (mySprite !== undefined) {
+        var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y};
+        socket.emit('update', playerObject);
     }
 }
 
@@ -70,16 +121,9 @@ function onPlayerDisconnected(playerId) {
     }
 }
 
-function onPlayerMoved(data) {
-    var playerSprite = getSpriteForPlayerId(data.id);
-    if (playerSprite !== undefined) {
-        playerSprite.velocity.y = 1.5;
-        redraw();
-    }
-}
-
 // TODO VOLKO OPTIMIZE THAT
 function refresh(playerList) {
+    refreshCountProgress++;
     for (var i = 0; i < playerList.length; i++) {
         var player = playerList[i];
 
@@ -88,8 +132,9 @@ function refresh(playerList) {
             var playerSprite = playerSprites[j];
             if (playerSprite.label === player.id) {
                 // We found the sprite related to the player, move it !
-                playerSprite.x = player.xPos;
-                playerSprite.y = player.yPos;
+                playerSprite.position.x = player.xPos;
+                playerSprite.position.y = player.yPos;
+                playerSprite.setVelocity(player.xVelocity, player.yVelocity);
 
                 found = true;
 
@@ -99,12 +144,17 @@ function refresh(playerList) {
 
         if (!found) {
             // Sprite not found, make it spawn !
-            var sprite = createSprite(Math.floor(Math.min(Math.max(SPRITE_SIZE, player.xPos * GAME_WIDTH), GAME_WIDTH - SPRITE_SIZE)), SPRITE_SIZE, SPRITE_SIZE, SPRITE_SIZE);
+            var sprite = createSprite(player.xPos, player.yPos, SPRITE_SIZE, SPRITE_SIZE);
             sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
             sprite.label = player.id;
 
             // Store the sprite to use it after
             playerSprites.add(sprite);
+
+            // Cache player own sprite for performance
+            if (player.id === socket.id) {
+                mySprite = sprite;
+            }
         }
     }
 }
