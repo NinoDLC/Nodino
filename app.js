@@ -12,6 +12,12 @@ var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
+// Consts file
+var consts = require('./const');
+
+// Store all players
+var playerList = [];
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -33,11 +39,7 @@ server.listen(8080);
 
 // New player connected !
 io.sockets.on('connection', function (socket) {
-    console.log("Client has connected! id = [" + socket.id + "]");
-
-    // socket.broadcast.emit = everyone but him
-    // io.sockets.emit = everyone and him
-    io.sockets.emit('player_connected', socket.id);
+    onPlayerConnected(io, socket);
 
     socket.on('disconnect', function () {
         onPlayerDisconnected(io, socket.id);
@@ -46,12 +48,68 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+function onPlayerConnected(io, socket) {
+    console.log("Client has connected! id = [" + socket.id + "]");
+
+    startServer();
+
+    // Randomize its X appearing position (on a scale from 0 to 1)
+    var xSpawn = Math.random();
+    // Randomize its color
+    var playerColor = consts.getPlayerColor();
+
+    playerList.push(getPlayerObject(socket.id, xSpawn, null, playerColor));
+
+    // socket.broadcast.emit = everyone but him
+    // io.sockets.emit = everyone and him
+    // socket.emit = just him
+    io.sockets.emit('player_connected', socket.id);
+
+    socket.emit('refresh', playerList);
+}
+
+function getPlayerObject(id, xPos, yPos, playerColor) {
+    return {id: id, xPos: xPos, yPos: yPos, playerColor: playerColor};
+}
+
 function onPlayerDisconnected(io, socketId) {
+    console.log("Client has disconnected! id = [" + socketId + "]");
+
+    for (var i = 0; i < playerList.length; i++) {
+        if (playerList[i].id === socketId) {
+            playerList.splice(i, 1);
+            break;
+        }
+    }
+
     io.sockets.emit('player_disconnected', socketId);
 
-    console.log("Client has disconnected! id = [" + socketId + "]");
+    if (playerList.length === 0) {
+        stopServer();
+    }
 }
 
 function onPlayerMoved(io, socketId, data) {
     io.sockets.emit('player_moved', {id: socketId, key: data});
+}
+
+var serverTick;
+var serverStarted;
+
+function startServer() {
+    if (!serverStarted) {
+        serverStarted = true;
+
+        serverTick = setInterval(onServerTick, 100);
+    }
+}
+
+function onServerTick() {
+    io.sockets.emit('refresh', playerList);
+}
+
+function stopServer() {
+    serverStarted = false;
+
+    clearInterval(serverTick);
 }

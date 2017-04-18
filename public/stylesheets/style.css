@@ -1,11 +1,14 @@
-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1;
+html, body {
+    height: 100%;
 }
 
-#game {
-    position: relative;
-    z-index: 2;
+body {
+    margin: 0;
+    display: flex;
+
+    /* This centers our sketch horizontally. */
+    justify-content: center;
+
+    /* This centers our sketch vertically. */
+    align-items: center;
 }
