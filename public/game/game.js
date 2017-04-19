@@ -114,8 +114,16 @@ function manageKeyEvents() {
             mySprite.velocity.x = -1.5;
         }
 
+        if (keyWentUp(KEY.LEFT)) {
+            mySprite.velocity.x = 0;
+        }
+
         if (keyWentDown(KEY.RIGHT)) {
             mySprite.velocity.x = 1.5;
+        }
+
+        if (keyWentUp(KEY.RIGHT)) {
+            mySprite.velocity.x = 0;
         }
     }
 
