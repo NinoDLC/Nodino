@@ -1,5 +1,7 @@
 const GAME_WIDTH = 800;
 const SPRITE_SIZE = 150;
+const INITIAL_SPAWN_YPOS = SPRITE_SIZE;
+const INITIAL_SPAWN_FALLING_VELOCITY = 3;
 
 var express = require('express');
 var path = require('path');
@@ -46,7 +48,7 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('disconnect', function () {
         onPlayerDisconnected(io, socket.id);
-    }).on('update', function (data) {
+    }).on('up', function (data) {
         onUpdate(socket.id, data);
     });
 });
@@ -59,7 +61,7 @@ function onPlayerConnected(io, socket) {
     // Randomize its color
     var playerColor = consts.getPlayerColor();
 
-    playerList.push({id: socket.id, xPos: xSpawn, yPos: SPRITE_SIZE, xVelocity: 0, yVelocity: 0, playerColor: playerColor});
+    playerList.push({id: socket.id, xPos: xSpawn, yPos: INITIAL_SPAWN_YPOS, xVelocity: 0, yVelocity: INITIAL_SPAWN_FALLING_VELOCITY, playerColor: playerColor});
 
     startServerTick();
 
@@ -111,7 +113,7 @@ function startServerTick() {
 }
 
 function onServerTick() {
-    io.sockets.emit('refresh', playerList);
+    io.sockets.emit('down', playerList);
 }
 
 function stopServerTick() {

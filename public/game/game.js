@@ -5,17 +5,13 @@ const SPRITE_SIZE = 150;
 // Keep track of our socket connection
 var socket;
 
-var bounds; // Group
-var ground; // Sprite for the ground
+var bounds; // Sprite for the ground
 
 // Keep track of playerSprites throught their sprite
 var playerSprites;
 
 // Cache the user's sprite for performance
 var mySprite;
-
-// User just used keyboard
-var iMoved;
 
 // Informations about localtick
 var tickCount = 0;
@@ -37,7 +33,7 @@ function setup() {
 
     playerSprites = new Group();
 
-    ground = createSprite(width / 2, height, width, 2);
+    var ground = createSprite(width / 2, height, width, 20);
     ground.shapeColor = color(20, 200, 20);
     ground.immovable = true;
 
@@ -51,7 +47,7 @@ function setup() {
     // Player connected : make it appear on screen
     socket.on('player_connected', onPlayerConnected);
     socket.on('player_disconnected', onPlayerDisconnected);
-    socket.on('refresh', refresh);
+    socket.on('down', refreshUiWithServerInformations);
 }
 
 function windowResized() {
@@ -62,28 +58,35 @@ function windowResized() {
 function draw() {
     fpsCountProgress++;
     background(51);
-    drawSprites();
-
-    playerSprites.bounce(bounds);
 
     if (refreshCountFinal !== null) {
         fill(255);
         text(refreshCountFinal + "tick/s", 2, 12);
         text(fpsCountFinal + "FPS", 2, 25);
     }
+
+    manageKeyEvents();
+
+    playerSprites.collide(bounds);
+
+    drawSprites();
 }
 
-function keyPressed() {
+function manageKeyEvents() {
     if (mySprite !== undefined) {
-        iMoved = true;
-
-        if (keyCode === UP_ARROW) {
+        if (keyWentDown(KEY.UP)) {
             mySprite.velocity.y = -1.5;
-        } else if (keyCode === DOWN_ARROW) {
+        }
+
+        if (keyWentDown(KEY.DOWN)) {
             mySprite.velocity.y = 1.5;
-        } else if (keyCode === LEFT_ARROW) {
+        }
+
+        if (keyWentDown(KEY.LEFT)) {
             mySprite.velocity.x = -1.5;
-        } else if (keyCode === RIGHT_ARROW) {
+        }
+
+        if (keyWentDown(KEY.RIGHT)) {
             mySprite.velocity.x = 1.5;
         }
     }
@@ -103,13 +106,16 @@ function onTick() {
         fpsCountProgress = 0;
     }
 
-    update();
+    sendInformationsToServer();
 }
 
-function update() {
+function sendInformationsToServer() {
     if (mySprite !== undefined) {
-        var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y};
-        socket.emit('update', playerObject);
+        var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y, timestamp: tickCount};
+
+        console.log(playerObject);
+
+        socket.emit('up', playerObject);
     }
 }
 
@@ -126,32 +132,46 @@ function onPlayerDisconnected(playerId) {
     }
 }
 
-// TODO VOLKO OPTIMIZE THAT
-function refresh(playerList) {
+function refreshUiWithServerInformations(playerList) {
     refreshCountProgress++;
+
     for (var i = 0; i < playerList.length; i++) {
         var player = playerList[i];
 
         var found = false;
         for (var j = 0; j < playerSprites.length; j++) {
             var playerSprite = playerSprites[j];
+
             if (playerSprite.label === player.id) {
-                // We found the sprite related to the player, move it !
-                if (!iMoved) {
+                // We found the sprite related to that player, move it !
+                if (playerSprite.label !== socket.id || tickCount - player.timestamp > 1) { // Receive other's player data immediately but allow 100ms interpolation for our sprite
+                    // X
                     if (playerSprite.velocity.x > 0) {
                         if ((playerSprite.position.x + (playerSprite.velocity.x * 10) < player.xPos // We walk to the right but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.x > player.xPos + (playerSprite.velocity.x * 10))) { // We walf to the right but the internet tells us we go too fast
+                            || playerSprite.position.x > player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the right but the internet tells us we go too fast
                             playerSprite.position.x = player.xPos;
-                            playerSprite.position.y = player.yPos;
                         }
                     } else if (playerSprite.velocity.x < 0) {
                         if ((playerSprite.position.x + (playerSprite.velocity.x * 10) > player.xPos // We walk to the left but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.x < player.xPos + (playerSprite.velocity.x * 10))) {
+                            || playerSprite.position.x < player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the left but the internet tells us we go too fast
                             playerSprite.position.x = player.xPos;
-                            playerSprite.position.y = player.yPos;
                         }
                     } else {
                         playerSprite.position.x = player.xPos;
+                    }
+
+                    // Y
+                    if (playerSprite.velocity.y < 0) {
+                        if ((playerSprite.position.y + (playerSprite.velocity.y * 10) > player.yPos // We are jumping but the internet tells us to go even further (more than expected)
+                            || playerSprite.position.y < player.yPos + (playerSprite.velocity.y * 10))) { // We are jumping but the internet tells us we go too fast
+                            playerSprite.position.y = player.yPos;
+                        }
+                    } else if (playerSprite.velocity.y > 0) {
+                        if ((playerSprite.position.y + (playerSprite.velocity.y * 10) < player.yPos // We are falling down but the internet tells us to go even further (more than expected)
+                            || playerSprite.position.y > player.yPos + (playerSprite.velocity.y * 10))) { // We are falling down but the internet tells us we go too fast
+                            playerSprite.position.y = player.yPos;
+                        }
+                    } else {
                         playerSprite.position.y = player.yPos;
                     }
 
@@ -168,6 +188,8 @@ function refresh(playerList) {
             // Sprite not found, make it spawn !
             var sprite = createSprite(player.xPos, player.yPos, SPRITE_SIZE, SPRITE_SIZE);
             sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
+            sprite.velocity.x = player.xVelocity;
+            sprite.velocity.y = player.yVelocity;
             sprite.label = player.id;
 
             // Store the sprite to use it after
@@ -182,14 +204,11 @@ function refresh(playerList) {
 }
 
 function getSpriteForPlayerId(playerId) {
-    var result = undefined;
-
-    playerSprites.some(function (playerSprite) {
-        if (playerSprite.label === playerId) {
-            result = playerSprite;
-            return true; // breaks loop
+    for (var i = 0; i < playerSprites.length; i++) {
+        if (playerSprites[i].label === playerId) {
+            return playerSprites[i];
         }
-    });
+    }
 
-    return result;
+    return undefined;
 }
