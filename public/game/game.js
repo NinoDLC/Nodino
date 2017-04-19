@@ -39,7 +39,7 @@ function setup() {
     createWorldBounds();
 
     // Start a socket connection to the server
-    // Some day we would run this server somewhere else
+    // TODO VOLKO PROD / DEV !
     socket = io.connect('http://localhost:8080');
 
     // Player connected : make it appear on screen
@@ -138,8 +138,6 @@ function onTick() {
 function sendInformationsToServer() {
     if (mySprite !== undefined) {
         var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y, timestamp: tickCount};
-
-        console.log(playerObject);
 
         socket.emit('up', playerObject);
     }
