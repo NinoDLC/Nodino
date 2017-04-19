@@ -1,11 +1,13 @@
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
-const SPRITE_SIZE = 150;
+const SPRITE_WIDTH = 50;
+const SPRITE_HEIGHT = 100;
 
 // Keep track of our socket connection
 var socket;
 
-var bounds; // Sprite for the ground
+// Sprite group for the ground
+var grounds;
 
 // Keep track of playerSprites throught their sprite
 var playerSprites;
@@ -32,13 +34,9 @@ function setup() {
     setInterval(onTick, 100);
 
     playerSprites = new Group();
+    grounds = new Group();
 
-    var ground = createSprite(width / 2, height, width, 20);
-    ground.shapeColor = color(20, 200, 20);
-    ground.immovable = true;
-
-    bounds = new Group();
-    bounds.add(ground);
+    createWorldBounds();
 
     // Start a socket connection to the server
     // Some day we would run this server somewhere else
@@ -48,6 +46,34 @@ function setup() {
     socket.on('player_connected', onPlayerConnected);
     socket.on('player_disconnected', onPlayerDisconnected);
     socket.on('down', refreshUiWithServerInformations);
+}
+
+function createWorldBounds() {
+    var ground = createSprite(width / 2, height - 10, width, 20);
+    ground.shapeColor = color(102, 51, 0);
+    ground.immovable = true;
+
+    var middleGround = createSprite(width / 2, 2 * (height / 3), width / 3, 20);
+    middleGround.shapeColor = color(130, 66, 0);
+    middleGround.immovable = true;
+
+    var highGround = createSprite(width / 2, height / 3, width / 6, 20);
+    highGround.shapeColor = color(180, 89, 0);
+    highGround.immovable = true;
+
+    var leftWall = createSprite(-SPRITE_WIDTH, 0, 2 * SPRITE_WIDTH, height * 2);
+    leftWall.shapeColor = color(0);
+    leftWall.immovable = true;
+
+    var rightWall = createSprite(width + SPRITE_WIDTH, 0, 2 * SPRITE_WIDTH, height * 2);
+    rightWall.shapeColor = color(0);
+    rightWall.immovable = true;
+
+    grounds.add(ground);
+    grounds.add(middleGround);
+    grounds.add(highGround);
+    grounds.add(leftWall);
+    grounds.add(rightWall);
 }
 
 function windowResized() {
@@ -67,7 +93,7 @@ function draw() {
 
     manageKeyEvents();
 
-    playerSprites.collide(bounds);
+    playerSprites.collide(grounds);
 
     drawSprites();
 }
@@ -144,39 +170,7 @@ function refreshUiWithServerInformations(playerList) {
 
             if (playerSprite.label === player.id) {
                 // We found the sprite related to that player, move it !
-                if (playerSprite.label !== socket.id || tickCount - player.timestamp > 1) { // Receive other's player data immediately but allow 100ms interpolation for our sprite
-                    // X
-                    if (playerSprite.velocity.x > 0) {
-                        if ((playerSprite.position.x + (playerSprite.velocity.x * 10) < player.xPos // We walk to the right but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.x > player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the right but the internet tells us we go too fast
-                            playerSprite.position.x = player.xPos;
-                        }
-                    } else if (playerSprite.velocity.x < 0) {
-                        if ((playerSprite.position.x + (playerSprite.velocity.x * 10) > player.xPos // We walk to the left but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.x < player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the left but the internet tells us we go too fast
-                            playerSprite.position.x = player.xPos;
-                        }
-                    } else {
-                        playerSprite.position.x = player.xPos;
-                    }
-
-                    // Y
-                    if (playerSprite.velocity.y < 0) {
-                        if ((playerSprite.position.y + (playerSprite.velocity.y * 10) > player.yPos // We are jumping but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.y < player.yPos + (playerSprite.velocity.y * 10))) { // We are jumping but the internet tells us we go too fast
-                            playerSprite.position.y = player.yPos;
-                        }
-                    } else if (playerSprite.velocity.y > 0) {
-                        if ((playerSprite.position.y + (playerSprite.velocity.y * 10) < player.yPos // We are falling down but the internet tells us to go even further (more than expected)
-                            || playerSprite.position.y > player.yPos + (playerSprite.velocity.y * 10))) { // We are falling down but the internet tells us we go too fast
-                            playerSprite.position.y = player.yPos;
-                        }
-                    } else {
-                        playerSprite.position.y = player.yPos;
-                    }
-
-                    playerSprite.setVelocity(player.xVelocity, player.yVelocity);
-                }
+                movePlayerSpriteAccordingToTheInternet(playerSprite, player);
 
                 found = true;
 
@@ -184,22 +178,62 @@ function refreshUiWithServerInformations(playerList) {
             }
         }
 
+        // Sprite not found, make it spawn !
         if (!found) {
-            // Sprite not found, make it spawn !
-            var sprite = createSprite(player.xPos, player.yPos, SPRITE_SIZE, SPRITE_SIZE);
-            sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
-            sprite.velocity.x = player.xVelocity;
-            sprite.velocity.y = player.yVelocity;
-            sprite.label = player.id;
-
-            // Store the sprite to use it after
-            playerSprites.add(sprite);
-
-            // Cache player own sprite for performance
-            if (player.id === socket.id) {
-                mySprite = sprite;
-            }
+            createPlayerSprite(player);
         }
+    }
+}
+
+function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
+    if (playerSprite.label !== socket.id || tickCount - player.timestamp > 1) { // Receive other's player data immediately but allow 100ms interpolation for our sprite
+        // X
+        if (playerSprite.velocity.x > 0) {
+            if ((playerSprite.position.x + (playerSprite.velocity.x * 10) < player.xPos // We walk to the right but the internet tells us to go even further (more than expected)
+                || playerSprite.position.x > player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the right but the internet tells us we go too fast
+                playerSprite.position.x = player.xPos;
+            }
+        } else if (playerSprite.velocity.x < 0) {
+            if ((playerSprite.position.x + (playerSprite.velocity.x * 10) > player.xPos // We walk to the left but the internet tells us to go even further (more than expected)
+                || playerSprite.position.x < player.xPos + (playerSprite.velocity.x * 10))) { // We walk to the left but the internet tells us we go too fast
+                playerSprite.position.x = player.xPos;
+            }
+        } else {
+            playerSprite.position.x = player.xPos;
+        }
+
+        // Y
+        if (playerSprite.velocity.y < 0) {
+            if ((playerSprite.position.y + (playerSprite.velocity.y * 10) > player.yPos // We are jumping but the internet tells us to go even further (more than expected)
+                || playerSprite.position.y < player.yPos + (playerSprite.velocity.y * 10))) { // We are jumping but the internet tells us we go too fast
+                playerSprite.position.y = player.yPos;
+            }
+        } else if (playerSprite.velocity.y > 0) {
+            if ((playerSprite.position.y + (playerSprite.velocity.y * 10) < player.yPos // We are falling down but the internet tells us to go even further (more than expected)
+                || playerSprite.position.y > player.yPos + (playerSprite.velocity.y * 10))) { // We are falling down but the internet tells us we go too fast
+                playerSprite.position.y = player.yPos;
+            }
+        } else {
+            playerSprite.position.y = player.yPos;
+        }
+
+        playerSprite.setVelocity(player.xVelocity, player.yVelocity);
+    }
+}
+
+function createPlayerSprite(player) {
+    var sprite = createSprite(player.xPos, player.yPos, SPRITE_WIDTH, SPRITE_HEIGHT);
+    sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
+    sprite.velocity.x = player.xVelocity;
+    sprite.velocity.y = player.yVelocity;
+    sprite.label = player.id;
+
+    // Store the sprite to use it after
+    playerSprites.add(sprite);
+
+    // Cache player own sprite for performance
+    if (player.id === socket.id) {
+        mySprite = sprite;
     }
 }
 
