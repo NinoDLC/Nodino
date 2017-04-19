@@ -2,6 +2,7 @@ const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
 const SPRITE_HEIGHT = 100;
+const LOCAL_TICK = 100;
 
 // Keep track of our socket connection
 var socket;
@@ -31,7 +32,7 @@ function setup() {
     background(51);
     frameRate(60);
 
-    setInterval(onTick, 100);
+    setInterval(onTick, 1000 / LOCAL_TICK);
 
     playerSprites = new Group();
     grounds = new Group();
@@ -87,8 +88,9 @@ function draw() {
 
     if (refreshCountFinal !== null) {
         fill(255);
-        text(refreshCountFinal + "tick/s", 2, 12);
-        text(fpsCountFinal + "FPS", 2, 25);
+        text(LOCAL_TICK + " uptick/s", 2, 12);
+        text(refreshCountFinal + " downtick/s", 2, 24);
+        text(fpsCountFinal + " FPS", 2, 36);
     }
 
     manageKeyEvents();
@@ -124,7 +126,7 @@ function onTick() {
     tickCount++;
 
     // Refresh informations once a second
-    if (tickCount % 10 === 0) {
+    if (tickCount % LOCAL_TICK === 0) {
         refreshCountFinal = refreshCountProgress;
         refreshCountProgress = 0;
 
