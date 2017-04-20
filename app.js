@@ -1,6 +1,5 @@
 const GAME_WIDTH = 800;
-const SPRITE_SIZE = 150;
-const INITIAL_SPAWN_YPOS = SPRITE_SIZE;
+const SPAWNING_ZONE_MARGIN = 150;
 const SERVER_TICK = 60;
 
 var express = require('express');
@@ -57,11 +56,11 @@ function onPlayerConnected(io, socket) {
     console.log("Client has connected! id = [" + socket.id + "]");
 
     // Randomize its X spawning position (on a scale from 0 to 800)
-    var xSpawn = Math.floor(Math.min(Math.max(SPRITE_SIZE, Math.random() * GAME_WIDTH), GAME_WIDTH - SPRITE_SIZE));
+    var xSpawn = Math.floor(Math.min(Math.max(SPAWNING_ZONE_MARGIN, Math.random() * GAME_WIDTH), GAME_WIDTH - SPAWNING_ZONE_MARGIN));
     // Randomize its color
     var playerColor = consts.getPlayerColor();
 
-    playerList.push({id: socket.id, xPos: xSpawn, yPos: INITIAL_SPAWN_YPOS, xVelocity: 0, yVelocity: 0, playerColor: playerColor});
+    playerList.push({id: socket.id, xPos: xSpawn, yPos: SPAWNING_ZONE_MARGIN, xVelocity: 0, yVelocity: 0, playerColor: playerColor});
 
     startServerTick();
 
