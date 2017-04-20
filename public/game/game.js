@@ -3,6 +3,16 @@ const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
 const SPRITE_HEIGHT = 100;
 const LOCAL_TICK = 100;
+// Informations about localtick
+var tickCount = 0;
+
+// Informations about servertick
+var refreshCountProgress = 0;
+var refreshCountFinal = null;
+
+// Informations about FPS
+var fpsCountProgress = 0;
+var fpsCountFinal = null;
 
 // Keep track of our socket connection
 var socket;
@@ -16,16 +26,6 @@ var playerSprites;
 // Cache the user's sprite for performance
 var mySprite;
 
-// Informations about localtick
-var tickCount = 0;
-
-// Informations about servertick
-var refreshCountProgress = 0;
-var refreshCountFinal = null;
-
-// Informations about FPS
-var fpsCountProgress = 0;
-var fpsCountFinal = null;
 
 function setup() {
     createCanvas(GAME_WIDTH, GAME_HEIGHT);
