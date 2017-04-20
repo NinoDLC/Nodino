@@ -3,6 +3,12 @@ const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
 const SPRITE_HEIGHT = 100;
 const LOCAL_TICK = 60;
+const PLAYER_GRAVITY = 1;
+const PLAYER_MAX_SPEED = 10;
+const PLAYER_SPEED_X = 4;
+const PLAYER_JUMP_VELOCITY = 10;
+const PLAYER_JUMP_MAXHEIGHT = 30;
+
 // Informations about localtick
 var tickCount = 0;
 
@@ -26,6 +32,9 @@ var playerSprites;
 // Cache the user's sprite for performance
 var mySprite;
 
+// Jump like super mario ! (And double jumps too !)
+var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
+var jumpFpsCount;
 
 function setup() {
     createCanvas(GAME_WIDTH, GAME_HEIGHT);
@@ -93,6 +102,12 @@ function draw() {
         text(fpsCountFinal + " FPS", 2, 36);
     }
 
+    if (jumpFpsCount !== undefined) {
+        jumpFpsCount++;
+    }
+
+    manageBoundsColisionAndGravity();
+
     manageKeyEvents();
 
     playerSprites.collide(grounds);
@@ -100,26 +115,87 @@ function draw() {
     drawSprites();
 }
 
+
+function manageBoundsColisionAndGravity() {
+    for (var i = 0; i < playerSprites.length; i++) {
+        var playerSprite = playerSprites[i];
+
+        if (playerSprite.touching.top) { // Player just smashed its face against the ceiling xD
+            playerSprite.velocity.y = 0;
+        }
+
+        if (playerSprite.touching.bottom) {
+            playerSprite.velocity.y = 0.1; // bug with manageKeyEvents.case0.(mySprite.touching.bottom) that would sometimes return false if velocity is 0...
+
+            if (!keyIsDown(KEY.UP)) {
+                // Player just landed (with UP key released), reset jump state
+                jumpState = 0;
+                jumpFpsCount = 0;
+            }
+        } else {
+            playerSprite.addSpeed(PLAYER_GRAVITY, 90);
+        }
+    }
+}
+
 function manageKeyEvents() {
     if (mySprite !== undefined) {
-        if (keyWentDown(KEY.UP)) {
-            mySprite.velocity.y = -1.5;
+        if (keyIsDown(KEY.UP)) {
+            switch (jumpState) {
+                case 0:
+                    if (mySprite.touching.bottom) {
+                        jumpState = 1;
+                    } else {
+                        jumpState = 3; // if player is falling from a border, only one jump is allowed
+                    }
+                    mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+                    jumpFpsCount = 0;
+                    break;
+
+                case 1:
+                case 3:
+                    if (jumpFpsCount < PLAYER_JUMP_MAXHEIGHT) {
+                        mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+                    }
+                    break;
+
+                case 2:
+                    jumpState = 3;
+                    jumpFpsCount = 0;
+
+                    mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+                    break;
+
+                case 4:
+                    // Don't do anything, player jumped twice !
+                    break;
+            }
+
+            jumpFpsCount++;
+        }
+
+        if (keyWentUp(KEY.UP)) {
+            if (jumpState === 1) {
+                jumpState = 2;
+            } else if (jumpState === 3) {
+                jumpState = 4;
+            }
         }
 
         if (keyWentDown(KEY.DOWN)) {
             mySprite.velocity.y = 1.5;
         }
 
-        if (keyWentDown(KEY.LEFT)) {
-            mySprite.velocity.x = -1.5;
+        if (keyIsDown(KEY.LEFT)) {
+            mySprite.velocity.x = -PLAYER_SPEED_X;
         }
 
         if (keyWentUp(KEY.LEFT)) {
             mySprite.velocity.x = 0;
         }
 
-        if (keyWentDown(KEY.RIGHT)) {
-            mySprite.velocity.x = 1.5;
+        if (keyIsDown(KEY.RIGHT)) {
+            mySprite.velocity.x = PLAYER_SPEED_X;
         }
 
         if (keyWentUp(KEY.RIGHT)) {
@@ -142,10 +218,10 @@ function onTick() {
         fpsCountProgress = 0;
     }
 
-    sendInformationsToServer();
+    sendSpriteInformationsToServer();
 }
 
-function sendInformationsToServer() {
+function sendSpriteInformationsToServer() {
     if (mySprite !== undefined) {
         var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y, timestamp: tickCount};
 
@@ -235,6 +311,7 @@ function createPlayerSprite(player) {
     sprite.velocity.x = player.xVelocity;
     sprite.velocity.y = player.yVelocity;
     sprite.label = player.id;
+    sprite.maxSpeed = PLAYER_MAX_SPEED;
 
     // Store the sprite to use it after
     playerSprites.add(sprite);

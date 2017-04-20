@@ -1,7 +1,6 @@
 const GAME_WIDTH = 800;
 const SPRITE_SIZE = 150;
 const INITIAL_SPAWN_YPOS = SPRITE_SIZE;
-const INITIAL_SPAWN_FALLING_VELOCITY = 3;
 const SERVER_TICK = 60;
 
 var express = require('express');
@@ -62,7 +61,7 @@ function onPlayerConnected(io, socket) {
     // Randomize its color
     var playerColor = consts.getPlayerColor();
 
-    playerList.push({id: socket.id, xPos: xSpawn, yPos: INITIAL_SPAWN_YPOS, xVelocity: 0, yVelocity: INITIAL_SPAWN_FALLING_VELOCITY, playerColor: playerColor});
+    playerList.push({id: socket.id, xPos: xSpawn, yPos: INITIAL_SPAWN_YPOS, xVelocity: 0, yVelocity: 0, playerColor: playerColor});
 
     startServerTick();
 
