@@ -2,7 +2,7 @@ const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
 const SPRITE_HEIGHT = 100;
-const LOCAL_TICK = 100;
+const LOCAL_TICK = 60;
 // Informations about localtick
 var tickCount = 0;
 

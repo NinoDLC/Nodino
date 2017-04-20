@@ -2,7 +2,7 @@ const GAME_WIDTH = 800;
 const SPRITE_SIZE = 150;
 const INITIAL_SPAWN_YPOS = SPRITE_SIZE;
 const INITIAL_SPAWN_FALLING_VELOCITY = 3;
-const SERVER_TICK = 100;
+const SERVER_TICK = 60;
 
 var express = require('express');
 var path = require('path');
