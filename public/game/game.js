@@ -125,11 +125,9 @@ function manageBoundsColisionAndGravity() {
         if (mySprite.touching.bottom) {
             mySprite.velocity.y = 0;
 
-            if (!keyIsDown(KEY.UP)) {
-                // Player just landed (with UP key released), reset jump state
-                jumpState = 0;
-                jumpFpsCount = 0;
-            }
+            // Player just landed, reset jump state
+            jumpState = 0;
+            jumpFpsCount = 0;
         } else {
             mySprite.addSpeed(PLAYER_GRAVITY, 90);
         }
