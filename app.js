@@ -1,6 +1,6 @@
 const GAME_WIDTH = 800;
 const SPAWNING_ZONE_MARGIN = 150;
-const SERVER_TICK = 60;
+const SERVER_TICK = 30;
 
 var express = require('express');
 var path = require('path');
@@ -99,6 +99,9 @@ function onPlayerDisconnected(io, socketId) {
 
     for (var i = 0; i < playerList.length; i++) {
         if (playerList[i].id === socketId) {
+            console.log("Removing player :");
+            console.log(playerList[i]);
+
             playerList.splice(i, 1);
             break;
         }
@@ -116,6 +119,8 @@ var serverStarted;
 
 function startServerTick() {
     if (!serverStarted) {
+        console.log("Server starting...");
+
         serverStarted = true;
 
         serverTick = setInterval(onServerTick, 1000 / SERVER_TICK);
@@ -127,6 +132,8 @@ function onServerTick() {
 }
 
 function stopServerTick() {
+    console.log("Server stopping...");
+
     serverStarted = false;
 
     clearInterval(serverTick);
