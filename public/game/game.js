@@ -117,15 +117,13 @@ function draw() {
 
 
 function manageBoundsColisionAndGravity() {
-    for (var i = 0; i < playerSprites.length; i++) {
-        var playerSprite = playerSprites[i];
-
-        if (playerSprite.touching.top) { // Player just smashed its face against the ceiling xD
-            playerSprite.velocity.y = 0;
+    if (mySprite !== undefined) {
+        if (mySprite.touching.top) { // Player just smashed its face against the ceiling xD
+            mySprite.velocity.y = 0;
         }
 
-        if (playerSprite.touching.bottom) {
-            playerSprite.velocity.y = 0.1; // bug with manageKeyEvents.case0.(mySprite.touching.bottom) that would sometimes return false if velocity is 0...
+        if (mySprite.touching.bottom) {
+            mySprite.velocity.y = 0;
 
             if (!keyIsDown(KEY.UP)) {
                 // Player just landed (with UP key released), reset jump state
@@ -133,7 +131,7 @@ function manageBoundsColisionAndGravity() {
                 jumpFpsCount = 0;
             }
         } else {
-            playerSprite.addSpeed(PLAYER_GRAVITY, 90);
+            mySprite.addSpeed(PLAYER_GRAVITY, 90);
         }
     }
 }
