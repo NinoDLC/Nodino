@@ -8,6 +8,10 @@ const PLAYER_MAX_SPEED = 10;
 const PLAYER_SPEED_X = 5;
 const PLAYER_JUMP_VELOCITY = 10;
 const PLAYER_JUMP_MAXHEIGHT = 30;
+const PLAYER_CANNONBALL_ROTATION_SPEED = 12;
+const PLAYER_CANNONBALL_SPEED = 3 * PLAYER_MAX_SPEED;
+const PLAYER_CANNONBALL_X_SLOWDOWN = 25; // percentage of current speed
+const PLAYER_CANNONBALL_MAXIMUM_ATTEMPT = 2; // if the player starts cannonball animation but doesn't land it, how many more can he tries ? 0 will disable cannonball
 
 // Informations about localtick
 var tickCount = 0;
@@ -35,6 +39,10 @@ var mySprite;
 // Jump like super mario ! (And double jumps too !)
 var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
 var jumpFpsCount;
+
+// Cannonball ! Rotate in air then cannonball !
+var cannonBallState; // 0 = ok, 1 = rotating, 2 = cannonball , 3 = landed but didn't release the key
+var cannonBallAttempt = 0;
 
 function setup() {
     createCanvas(GAME_WIDTH, GAME_HEIGHT);
@@ -123,11 +131,21 @@ function manageBoundsColisionAndGravity() {
         }
 
         if (mySprite.touching.bottom) {
-            mySprite.velocity.y = 0;
+            mySprite.velocity.y = 0.1;
+            mySprite.maxSpeed = PLAYER_MAX_SPEED;
+            mySprite.rotation = 0;
 
             // Player just landed, reset jump state
             jumpState = 0;
             jumpFpsCount = 0;
+            cannonBallAttempt = 0;
+
+            // Player smashed his cannonball !
+            if (!keyIsDown(KEY.DOWN)) {
+                cannonBallState = 0;
+            } else {
+                cannonBallState = 3;
+            }
         } else {
             mySprite.addSpeed(PLAYER_GRAVITY, 90);
         }
@@ -141,6 +159,9 @@ function manageKeyEvents() {
                 case 0:
                     if (mySprite.touching.bottom) {
                         jumpState = 1;
+
+                        cannonBallState = 0;   // Player didn't release its BOTTOM arrow after its cannonball and before jumping
+                        cannonBallAttempt = 0; // so be kind and reset its cannonball protections
                     } else {
                         jumpState = 3; // if player is falling from a border, only one jump is allowed
                     }
@@ -149,9 +170,16 @@ function manageKeyEvents() {
                     break;
 
                 case 1:
+                    if (jumpFpsCount < PLAYER_JUMP_MAXHEIGHT) {
+                        mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+                    }
+                    break;
+
                 case 3:
                     if (jumpFpsCount < PLAYER_JUMP_MAXHEIGHT) {
                         mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+                    } else {
+                        jumpState = 4;
                     }
                     break;
 
@@ -178,12 +206,55 @@ function manageKeyEvents() {
             }
         }
 
-        if (keyWentDown(KEY.DOWN)) {
-            mySprite.velocity.y = 1.5;
+        if (keyIsDown(KEY.DOWN)) {
+            switch (cannonBallState) {
+                case 0:
+                case 3:
+                    if (!mySprite.touching.bottom && cannonBallAttempt < PLAYER_CANNONBALL_MAXIMUM_ATTEMPT) {
+                        cannonBallState = 1;
+
+                        mySprite.velocity.x = 0;
+                        mySprite.velocity.y = 0;
+
+                        mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
+                    }
+                    break;
+
+                case 1:
+                    mySprite.velocity.x = 0;
+                    mySprite.velocity.y = 0;
+
+                    mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
+
+                    if (mySprite.rotation >= 360) {
+                        mySprite.rotation = 0;
+                        mySprite.maxSpeed = PLAYER_CANNONBALL_SPEED;
+                        mySprite.velocity.y = PLAYER_CANNONBALL_SPEED;
+                        cannonBallState = 2;
+                    }
+
+                    break;
+            }
+        }
+
+        if (keyWentUp(KEY.DOWN)) {
+            mySprite.rotation = 0;
+
+            if (cannonBallState === 1) {
+                cannonBallState = 0;
+                cannonBallAttempt++;
+            }
         }
 
         if (keyIsDown(KEY.LEFT)) {
-            mySprite.velocity.x = -PLAYER_SPEED_X;
+            // Can't move while rotating for ground smash
+            if (cannonBallState === 1) {
+                mySprite.velocity.x = 0;
+            } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
+                mySprite.velocity.x = -(PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
+            } else {
+                mySprite.velocity.x = -PLAYER_SPEED_X;
+            }
         }
 
         if (keyWentUp(KEY.LEFT)) {
@@ -191,7 +262,14 @@ function manageKeyEvents() {
         }
 
         if (keyIsDown(KEY.RIGHT)) {
-            mySprite.velocity.x = PLAYER_SPEED_X;
+            // Can't move while rotating for ground smash
+            if (cannonBallState === 1) {
+                mySprite.velocity.x = 0;
+            } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
+                mySprite.velocity.x = (PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
+            } else {
+                mySprite.velocity.x = PLAYER_SPEED_X;
+            }
         }
 
         if (keyWentUp(KEY.RIGHT)) {
@@ -225,7 +303,8 @@ function sendSpriteInformationsToServer() {
             yPos: mySprite.position.y,
             xVelocity: mySprite.velocity.x,
             yVelocity: mySprite.velocity.y,
-            timestamp: tickCount
+            rotation: mySprite.rotation,
+            maxSpeed: mySprite.maxSpeed
         };
 
         socket.emit('up', playerObject);
@@ -273,7 +352,7 @@ function refreshUiWithServerInformations(playerList) {
 }
 
 function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
-    if (playerSprite.label !== socket.id || tickCount - player.timestamp > 1) { // Receive other's player data immediately but allow 100ms interpolation for our sprite
+    if (playerSprite.label !== socket.id) { // Receive other's player data immediately but allow 100ms interpolation for our sprite
         // X
         if (playerSprite.velocity.x > 0) {
             if ((playerSprite.position.x + (playerSprite.velocity.x * 10) < player.xPos // We walk to the right but the internet tells us to go even further (more than expected)
@@ -304,6 +383,8 @@ function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
             playerSprite.position.y = player.yPos;
         }
 
+        playerSprite.rotation = player.rotation;
+        playerSprite.maxSpeed = player.maxSpeed;
         playerSprite.setVelocity(player.xVelocity, player.yVelocity);
     }
 }

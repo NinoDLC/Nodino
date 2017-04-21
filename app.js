@@ -60,7 +60,16 @@ function onPlayerConnected(io, socket) {
     // Randomize its color
     var playerColor = consts.getPlayerColor();
 
-    playerList.push({id: socket.id, xPos: xSpawn, yPos: SPAWNING_ZONE_MARGIN, xVelocity: 0, yVelocity: 0, playerColor: playerColor});
+    playerList.push({
+        id: socket.id,
+        xPos: xSpawn,
+        yPos: SPAWNING_ZONE_MARGIN,
+        xVelocity: 0,
+        yVelocity: 0,
+        rotation: 0,
+        maxSpeed: 0,
+        playerColor: playerColor
+    });
 
     startServerTick();
 
@@ -79,6 +88,8 @@ function onUpdate(id, data) {
             playerInfo.yPos = data.yPos;
             playerInfo.xVelocity = data.xVelocity;
             playerInfo.yVelocity = data.yVelocity;
+            playerInfo.rotation = data.rotation;
+            playerInfo.maxSpeed = data.maxSpeed;
         }
     }
 }
