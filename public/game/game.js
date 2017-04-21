@@ -219,7 +219,14 @@ function onTick() {
 
 function sendSpriteInformationsToServer() {
     if (mySprite !== undefined) {
-        var playerObject = {id: socket.id, xPos: mySprite.position.x, yPos: mySprite.position.y, xVelocity: mySprite.velocity.x, yVelocity: mySprite.velocity.y, timestamp: tickCount};
+        var playerObject = {
+            id: socket.id,
+            xPos: mySprite.position.x,
+            yPos: mySprite.position.y,
+            xVelocity: mySprite.velocity.x,
+            yVelocity: mySprite.velocity.y,
+            timestamp: tickCount
+        };
 
         socket.emit('up', playerObject);
     }
