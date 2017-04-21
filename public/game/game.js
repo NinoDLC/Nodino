@@ -18,17 +18,17 @@ var tickCount = 0;
 
 // Informations about servertick
 var refreshCountProgress = 0;
-var refreshCountFinal = null;
+var refreshCountFinal = 0;
 
 // Informations about FPS
 var fpsCountProgress = 0;
-var fpsCountFinal = null;
+var fpsCountFinal = 0;
 
 // Keep track of our socket connection
 var socket;
 
-// Sprite group for the ground
-var grounds;
+// Sprite group for the bounds
+var bounds;
 
 // Keep track of playerSprites throught their sprite
 var playerSprites;
@@ -52,7 +52,7 @@ function setup() {
     setInterval(onTick, 1000 / LOCAL_TICK);
 
     playerSprites = new Group();
-    grounds = new Group();
+    bounds = new Group();
 
     createWorldBounds();
 
@@ -67,9 +67,9 @@ function setup() {
 }
 
 function createWorldBounds() {
-    var ground = createSprite(width / 2, height - 10, width, 20);
-    ground.shapeColor = color(102, 51, 0);
-    ground.immovable = true;
+    var bottomGround = createSprite(width / 2, height - 10, width, 20);
+    bottomGround.shapeColor = color(102, 51, 0);
+    bottomGround.immovable = true;
 
     var middleGround = createSprite(width / 2, 2 * (height / 3), width / 3, 20);
     middleGround.shapeColor = color(130, 66, 0);
@@ -87,11 +87,11 @@ function createWorldBounds() {
     rightWall.shapeColor = color(0);
     rightWall.immovable = true;
 
-    grounds.add(ground);
-    grounds.add(middleGround);
-    grounds.add(highGround);
-    grounds.add(leftWall);
-    grounds.add(rightWall);
+    bounds.add(bottomGround);
+    bounds.add(middleGround);
+    bounds.add(highGround);
+    bounds.add(leftWall);
+    bounds.add(rightWall);
 }
 
 function windowResized() {
@@ -285,6 +285,8 @@ function onTick() {
 
     // Refresh informations once a second
     if (tickCount % LOCAL_TICK === 0) {
+        tickCount = 0;
+
         refreshCountFinal = refreshCountProgress;
         refreshCountProgress = 0;
 
@@ -297,6 +299,7 @@ function onTick() {
 
 function sendSpriteInformationsToServer() {
     if (mySprite !== undefined) {
+
         var playerObject = {
             id: socket.id,
             xPos: mySprite.position.x,
