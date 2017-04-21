@@ -314,7 +314,7 @@ function onCollideBounds(playerSprite) {
 function onTick() {
     tickCount++;
 
-    // Refresh informations once a second
+    // Refresh UI stats once a second
     if (tickCount % LOCAL_TICK === 0) {
         tickCount = 0;
 
