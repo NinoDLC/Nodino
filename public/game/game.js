@@ -1,3 +1,5 @@
+const DEBUG = true;
+
 const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
@@ -12,6 +14,9 @@ const PLAYER_CANNONBALL_ROTATION_SPEED = 12;
 const PLAYER_CANNONBALL_SPEED = 3 * PLAYER_MAX_SPEED;
 const PLAYER_CANNONBALL_X_SLOWDOWN = 25; // percentage of current speed
 const PLAYER_CANNONBALL_MAXIMUM_ATTEMPT = 2; // if the player starts cannonball animation but doesn't land it, how many more can he tries ? 0 will disable cannonball
+
+// Sprite image POC
+var pharah;
 
 // Informations about localtick
 var tickCount = 0;
@@ -35,6 +40,7 @@ var playerSprites;
 
 // Cache the user's sprite for performance
 var mySprite;
+var spriteOrientation; // 1 = facing right (same as source), -1 facing left
 
 // Jump like super mario ! (And double jumps too !)
 var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
@@ -43,6 +49,10 @@ var jumpFpsCount;
 // Cannonball ! Rotate in air then cannonball !
 var cannonBallState; // 0 = ok, 1 = rotating, 2 = cannonball , 3 = landed but didn't release the key
 var cannonBallAttempt = 0;
+
+function preload() {
+    pharah = loadImage('/images/pharah.png');
+}
 
 function setup() {
     createCanvas(GAME_WIDTH, GAME_HEIGHT);
@@ -100,11 +110,13 @@ function windowResized() {
 }
 
 function draw() {
-    fpsCountProgress++;
     background(51);
 
-    if (refreshCountFinal !== null) {
+    if (DEBUG) {
+        fpsCountProgress++;
+
         fill(255);
+
         text(LOCAL_TICK + " uptick/s", 2, 12);
         text(refreshCountFinal + " downtick/s", 2, 24);
         text(fpsCountFinal + " FPS", 2, 36);
@@ -115,14 +127,13 @@ function draw() {
     }
 
     manageBoundsColisionAndGravity();
-
     manageKeyEvents();
+    manageSpriteDirection();
 
-    playerSprites.collide(grounds);
+    playerSprites.collide(bounds, onCollideBounds);
 
     drawSprites();
 }
-
 
 function manageBoundsColisionAndGravity() {
     if (mySprite !== undefined) {
@@ -131,7 +142,7 @@ function manageBoundsColisionAndGravity() {
         }
 
         if (mySprite.touching.bottom) {
-            mySprite.velocity.y = 0.1;
+            mySprite.velocity.y = 0.1; // bug with manageKeyEvents.keyIsDown(KEY.UP).jumpState.case0.mySprite.touching.bottom that would sometimes return false if velocity is 0...
             mySprite.maxSpeed = PLAYER_MAX_SPEED;
             mySprite.rotation = 0;
 
@@ -280,6 +291,26 @@ function manageKeyEvents() {
     return 0;
 }
 
+function manageSpriteDirection() {
+    for (var i = 0; i < playerSprites.length; i++) {
+        var playerSprite = playerSprites[i];
+
+        if (playerSprite.velocity.x > 1) {
+            spriteOrientation = 1;
+        } else if (playerSprite.velocity.x < -1) {
+            spriteOrientation = -1;
+        }
+
+        playerSprite.mirrorX(spriteOrientation);
+    }
+}
+
+function onCollideBounds(playerSprite) {
+    playerSprite.velocity.x = Math.round(playerSprite.velocity.x);
+    playerSprite.position.x = Math.round(playerSprite.position.x);
+    playerSprite.position.y = Math.round(playerSprite.position.y);
+}
+
 function onTick() {
     tickCount++;
 
@@ -394,7 +425,16 @@ function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
 
 function createPlayerSprite(player) {
     var sprite = createSprite(player.xPos, player.yPos, SPRITE_WIDTH, SPRITE_HEIGHT);
-    sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
+
+    sprite.addImage(pharah);
+    sprite.setCollider("circle", 0, 0, 30, 30);
+
+    if (DEBUG) {
+        // Maybe usefull when player names come
+        // sprite.shapeColor = color(player.playerColor.r, player.playerColor.g, player.playerColor.b);
+        sprite.debug = true;
+    }
+
     sprite.velocity.x = player.xVelocity;
     sprite.velocity.y = player.yVelocity;
     sprite.label = player.id;
