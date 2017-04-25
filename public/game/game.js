@@ -4,12 +4,15 @@ const GAME_WIDTH = 800;
 const GAME_HEIGHT = 600;
 const SPRITE_WIDTH = 50;
 const SPRITE_HEIGHT = 100;
+
 const LOCAL_TICK = 30;
+
 const PLAYER_GRAVITY = 1;
 const PLAYER_MAX_SPEED = 10;
 const PLAYER_SPEED_X = 5;
 const PLAYER_JUMP_VELOCITY = 10;
-const PLAYER_JUMP_MAXHEIGHT = 30;
+const PLAYER_JUMP_MAXHEIGHT = 12; // Number of ticks the player can jump at most
+
 const PLAYER_CANNONBALL_ROTATION_SPEED = 12;
 const PLAYER_CANNONBALL_SPEED = 3 * PLAYER_MAX_SPEED;
 const PLAYER_CANNONBALL_X_SLOWDOWN = 25; // percentage of current speed
@@ -18,7 +21,7 @@ const PLAYER_CANNONBALL_MAXIMUM_ATTEMPT = 2; // if the player starts cannonball 
 // Sprite image POC
 var pharah;
 
-// Informations about localtick
+// CurrentTimeMillis (ticks since the beginning of the game)
 var tickCount = 0;
 
 // Informations about servertick
@@ -44,7 +47,7 @@ var spriteOrientation; // 1 = facing right (same as source), -1 facing left
 
 // Jump like super mario ! (And double jumps too !)
 var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
-var jumpFpsCount;
+var jumpTimestamp = 0; // When did the player start jumping ?
 
 // Cannonball ! Rotate in air then cannonball !
 var cannonBallState; // 0 = ok, 1 = rotating, 2 = cannonball , 3 = landed but didn't release the key
@@ -122,10 +125,6 @@ function draw() {
         text(fpsCountFinal + " FPS", 2, 36);
     }
 
-    if (jumpFpsCount !== undefined) {
-        jumpFpsCount++;
-    }
-
     manageBoundsColisionAndGravity();
     manageKeyEvents();
     manageSpriteDirection();
@@ -148,7 +147,7 @@ function manageBoundsColisionAndGravity() {
 
             // Player just landed, reset jump state
             jumpState = 0;
-            jumpFpsCount = 0;
+            jumpTimestamp = tickCount;
             cannonBallAttempt = 0;
 
             // Player smashed his cannonball !
@@ -166,106 +165,23 @@ function manageBoundsColisionAndGravity() {
 function manageKeyEvents() {
     if (mySprite !== undefined) {
         if (keyIsDown(KEY.UP)) {
-            switch (jumpState) {
-                case 0:
-                    if (mySprite.touching.bottom) {
-                        jumpState = 1;
-
-                        cannonBallState = 0;   // Player didn't release its BOTTOM arrow after its cannonball and before jumping
-                        cannonBallAttempt = 0; // so be kind and reset its cannonball protections
-                    } else {
-                        jumpState = 3; // if player is falling from a border, only one jump is allowed
-                    }
-                    mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
-                    jumpFpsCount = 0;
-                    break;
-
-                case 1:
-                    if (jumpFpsCount < PLAYER_JUMP_MAXHEIGHT) {
-                        mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
-                    }
-                    break;
-
-                case 3:
-                    if (jumpFpsCount < PLAYER_JUMP_MAXHEIGHT) {
-                        mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
-                    } else {
-                        jumpState = 4;
-                    }
-                    break;
-
-                case 2:
-                    jumpState = 3;
-                    jumpFpsCount = 0;
-
-                    mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
-                    break;
-
-                case 4:
-                    // Don't do anything, player jumped twice !
-                    break;
-            }
-
-            jumpFpsCount++;
+            onKeyUpIsDown();
         }
 
         if (keyWentUp(KEY.UP)) {
-            if (jumpState === 1) {
-                jumpState = 2;
-            } else if (jumpState === 3) {
-                jumpState = 4;
-            }
+            onKeyUpWentUp();
         }
 
         if (keyIsDown(KEY.DOWN)) {
-            switch (cannonBallState) {
-                case 0:
-                case 3:
-                    if (!mySprite.touching.bottom && cannonBallAttempt < PLAYER_CANNONBALL_MAXIMUM_ATTEMPT) {
-                        cannonBallState = 1;
-
-                        mySprite.velocity.x = 0;
-                        mySprite.velocity.y = 0;
-
-                        mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
-                    }
-                    break;
-
-                case 1:
-                    mySprite.velocity.x = 0;
-                    mySprite.velocity.y = 0;
-
-                    mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
-
-                    if (mySprite.rotation >= 360) {
-                        mySprite.rotation = 0;
-                        mySprite.maxSpeed = PLAYER_CANNONBALL_SPEED;
-                        mySprite.velocity.y = PLAYER_CANNONBALL_SPEED;
-                        cannonBallState = 2;
-                    }
-
-                    break;
-            }
+            onKeyDownIsDown();
         }
 
         if (keyWentUp(KEY.DOWN)) {
-            mySprite.rotation = 0;
-
-            if (cannonBallState === 1) {
-                cannonBallState = 0;
-                cannonBallAttempt++;
-            }
+            onKeyDownIsUp();
         }
 
         if (keyIsDown(KEY.LEFT)) {
-            // Can't move while rotating for ground smash
-            if (cannonBallState === 1) {
-                mySprite.velocity.x = 0;
-            } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
-                mySprite.velocity.x = -(PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
-            } else {
-                mySprite.velocity.x = -PLAYER_SPEED_X;
-            }
+            onKeyLeftIsDown();
         }
 
         if (keyWentUp(KEY.LEFT)) {
@@ -273,14 +189,7 @@ function manageKeyEvents() {
         }
 
         if (keyIsDown(KEY.RIGHT)) {
-            // Can't move while rotating for ground smash
-            if (cannonBallState === 1) {
-                mySprite.velocity.x = 0;
-            } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
-                mySprite.velocity.x = (PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
-            } else {
-                mySprite.velocity.x = PLAYER_SPEED_X;
-            }
+            onKeyRightIsDown();
         }
 
         if (keyWentUp(KEY.RIGHT)) {
@@ -291,6 +200,117 @@ function manageKeyEvents() {
     return 0;
 }
 
+function onKeyUpIsDown() {
+    switch (jumpState) {
+        case 0:
+            if (mySprite.touching.bottom) {
+                jumpState = 1;
+
+                cannonBallState = 0;   // Player didn't release its BOTTOM arrow after its cannonball and before jumping
+                cannonBallAttempt = 0; // so be kind and reset its cannonball protections
+            } else {
+                jumpState = 3; // if player is falling from a border, only one jump is allowed
+            }
+            mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+            jumpTimestamp = tickCount;
+            break;
+
+        case 1:
+            if (tickCount - jumpTimestamp < PLAYER_JUMP_MAXHEIGHT) {
+                mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+            }
+            break;
+
+        case 3:
+            if (tickCount - jumpTimestamp < PLAYER_JUMP_MAXHEIGHT) {
+                mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+            } else {
+                jumpState = 4;
+            }
+            break;
+
+        case 2:
+            jumpState = 3;
+            jumpTimestamp = tickCount;
+
+            mySprite.velocity.y = -PLAYER_JUMP_VELOCITY;
+            break;
+
+        case 4:
+            // Don't do anything, player jumped twice !
+            break;
+    }
+}
+
+function onKeyUpWentUp() {
+    if (jumpState === 1) {
+        jumpState = 2;
+    } else if (jumpState === 3) {
+        jumpState = 4;
+    }
+}
+
+function onKeyDownIsDown() {
+    switch (cannonBallState) {
+        case 0:
+        case 3:
+            if (!mySprite.touching.bottom && cannonBallAttempt < PLAYER_CANNONBALL_MAXIMUM_ATTEMPT) {
+                cannonBallState = 1;
+
+                mySprite.velocity.x = 0;
+                mySprite.velocity.y = 0;
+
+                mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
+            }
+            break;
+
+        case 1:
+            mySprite.velocity.x = 0;
+            mySprite.velocity.y = 0;
+
+            mySprite.rotation += PLAYER_CANNONBALL_ROTATION_SPEED;
+
+            if (mySprite.rotation >= 360) {
+                mySprite.rotation = 0;
+                mySprite.maxSpeed = PLAYER_CANNONBALL_SPEED;
+                mySprite.velocity.y = PLAYER_CANNONBALL_SPEED;
+                cannonBallState = 2;
+            }
+
+            break;
+    }
+}
+
+function onKeyDownIsUp() {
+    mySprite.rotation = 0;
+
+    if (cannonBallState === 1) {
+        cannonBallState = 0;
+        cannonBallAttempt++;
+    }
+}
+
+function onKeyLeftIsDown() {
+    // Can't move while rotating for ground smash
+    if (cannonBallState === 1) {
+        mySprite.velocity.x = 0;
+    } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
+        mySprite.velocity.x = -(PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
+    } else {
+        mySprite.velocity.x = -PLAYER_SPEED_X;
+    }
+}
+
+function onKeyRightIsDown() {
+    // Can't move while rotating for ground smash
+    if (cannonBallState === 1) {
+        mySprite.velocity.x = 0;
+    } else if (cannonBallState === 2) { // Slowed down X axis moves during cannonball !
+        mySprite.velocity.x = (PLAYER_SPEED_X * PLAYER_CANNONBALL_X_SLOWDOWN / 100);
+    } else {
+        mySprite.velocity.x = PLAYER_SPEED_X;
+    }
+}
 function manageSpriteDirection() {
     for (var i = 0; i < playerSprites.length; i++) {
         var playerSprite = playerSprites[i];
@@ -305,6 +325,7 @@ function manageSpriteDirection() {
     }
 }
 
+// Rounded numbers are bad for socket.io performances... Round it up !
 function onCollideBounds(playerSprite) {
     playerSprite.velocity.x = Math.round(playerSprite.velocity.x);
     playerSprite.position.x = Math.round(playerSprite.position.x);
@@ -316,8 +337,6 @@ function onTick() {
 
     // Refresh UI stats once a second
     if (tickCount % LOCAL_TICK === 0) {
-        tickCount = 0;
-
         refreshCountFinal = refreshCountProgress;
         refreshCountProgress = 0;
 
