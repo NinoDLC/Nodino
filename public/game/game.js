@@ -43,7 +43,7 @@ var playerSprites;
 
 // Cache the user's sprite for performance
 var mySprite;
-var spriteOrientation; // 1 = facing right (same as source), -1 facing left
+var spriteOrientation = 1; // 1 = facing right (same as source), -1 facing left
 
 // Jump like super mario ! (And double jumps too !)
 var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
@@ -312,16 +312,26 @@ function onKeyRightIsDown() {
     }
 }
 function manageSpriteDirection() {
-    for (var i = 0; i < playerSprites.length; i++) {
-        var playerSprite = playerSprites[i];
+    // Other players
+    for (var i = 0; i < otherPlayerSprites.length; i++) {
+        var otherPlayerSprite = otherPlayerSprites[i];
 
-        if (playerSprite.velocity.x > 1) {
+        if (otherPlayerSprite.velocity.x > 1) {
+            otherPlayerSprite.mirrorX(1);
+        } else if (otherPlayerSprite.velocity.x < -1) {
+            otherPlayerSprite.mirrorX(-1);
+        }
+    }
+
+    // Us
+    if (mySprite !== undefined) {
+        if (mySprite.velocity.x > 1) {
             spriteOrientation = 1;
-        } else if (playerSprite.velocity.x < -1) {
+        } else if (mySprite.velocity.x < -1) {
             spriteOrientation = -1;
         }
 
-        playerSprite.mirrorX(spriteOrientation);
+        mySprite.mirrorX(spriteOrientation);
     }
 }
 
@@ -357,7 +367,8 @@ function sendSpriteInformationsToServer() {
             xVelocity: mySprite.velocity.x,
             yVelocity: mySprite.velocity.y,
             rotation: mySprite.rotation,
-            maxSpeed: mySprite.maxSpeed
+            maxSpeed: mySprite.maxSpeed,
+            orientation: spriteOrientation
         };
 
         socket.emit('up', playerObject);
@@ -439,6 +450,7 @@ function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
         playerSprite.rotation = player.rotation;
         playerSprite.maxSpeed = player.maxSpeed;
         playerSprite.setVelocity(player.xVelocity, player.yVelocity);
+        playerSprite.mirrorX(player.orientation);
     }
 }
 

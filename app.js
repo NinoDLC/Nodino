@@ -68,6 +68,7 @@ function onPlayerConnected(io, socket) {
         yVelocity: 0,
         rotation: 0,
         maxSpeed: 0,
+        orientation: 1,
         playerColor: playerColor
     });
 
@@ -90,6 +91,7 @@ function onUpdate(id, data) {
             playerInfo.yVelocity = data.yVelocity;
             playerInfo.rotation = data.rotation;
             playerInfo.maxSpeed = data.maxSpeed;
+            playerInfo.orientation = data.orientation;
         }
     }
 }
