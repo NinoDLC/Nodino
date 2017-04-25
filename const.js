@@ -120,6 +120,11 @@ const COLORS = [
 
 const COLOR_LENGTH = COLORS.length;
 
+const GAME_WIDTH = 800;
+const SPAWNING_ZONE_MARGIN = 150;
+const SERVER_TICK = 30;
+
+
 /**
  * Return a randomized color from a (somewhat large) pool of colors.
  * Returned object is like : <code>{name: "gray", r: 128, g: 128, b: 128}</code>
@@ -131,5 +136,8 @@ var getPlayerColor = function () {
 };
 
 module.exports = {
+    GAME_WIDTH: GAME_WIDTH,
+    SPAWNING_ZONE_MARGIN: SPAWNING_ZONE_MARGIN,
+    SERVER_TICK: SERVER_TICK,
     getPlayerColor: getPlayerColor
 };
