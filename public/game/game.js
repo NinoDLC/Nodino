@@ -186,17 +186,9 @@ function manageKeyEvents() {
 
         if (keyIsDown(KEY.LEFT)) {
             onKeyLeftIsDown();
-        }
-
-        if (keyWentUp(KEY.LEFT)) {
-            mySprite.velocity.x = 0;
-        }
-
-        if (keyIsDown(KEY.RIGHT)) {
+        } else if (keyIsDown(KEY.RIGHT)) {
             onKeyRightIsDown();
-        }
-
-        if (keyWentUp(KEY.RIGHT)) {
+        } else {
             mySprite.velocity.x = 0;
         }
     }
