@@ -18,8 +18,15 @@ const PLAYER_CANNONBALL_SPEED = 3 * PLAYER_MAX_SPEED;
 const PLAYER_CANNONBALL_X_SLOWDOWN = 25; // percentage of current speed
 const PLAYER_CANNONBALL_MAXIMUM_ATTEMPT = 2; // if the player starts cannonball animation but doesn't land it, how many more can he tries ? 0 will disable cannonball
 
+const PLAYER_ROCKET_SPEED = 8;
+const PLAYER_ROCKET_COOLDOWN = LOCAL_TICK * 2 / 3; // 0.66 second
+
 // Sprite image POC
-var pharah;
+var pharahImage;
+
+// Advanced image POC and animation
+var rocketImage;
+var rocketTrailAnimation;
 
 // CurrentTimeMillis (ticks since the beginning of the game)
 var tickCount = 0;
@@ -45,6 +52,9 @@ var otherPlayerSprites;
 var mySprite;
 var spriteOrientation = 1; // 1 = facing right (same as source), -1 facing left
 
+// Fireh !
+var myRockets;
+
 // Jump like super mario ! (And double jumps too !)
 var jumpState; // 0 = not jumping, 1 = single jumping (still pressing), 2 = single jump done (released), 3 = double jumping (still pressing),  4 = double jumping done (released)
 var jumpTimestamp = 0; // When did the player start jumping ?
@@ -53,8 +63,13 @@ var jumpTimestamp = 0; // When did the player start jumping ?
 var cannonBallState; // 0 = ok, 1 = rotating, 2 = cannonball , 3 = landed but didn't release the key
 var cannonBallAttempt = 0;
 
+// Rockets !
+var rocketFireTimestamp = 0;
+
 function preload() {
-    pharah = loadImage('/images/pharah.png');
+    pharahImage = loadImage('/images/pharah.png');
+    rocketImage = loadImage('/images/rocket.png');
+    rocketTrailAnimation = loadAnimation("/images/rocket_trail1.png", "/images/rocket_trail2.png", "/images/rocket_trail3.png");
 }
 
 function setup() {
@@ -65,6 +80,7 @@ function setup() {
     setInterval(onTick, 1000 / LOCAL_TICK);
 
     otherPlayerSprites = new Group();
+    myRockets = new Group();
     bounds = new Group();
 
     createWorldBounds();
@@ -134,6 +150,8 @@ function draw() {
         mySprite.collide(bounds, onCollideBounds);
     }
 
+    myRockets.overlap(otherPlayerSprites, onRocketHit);
+    myRockets.overlap(bounds, onRocketHitGround);
 
     drawSprites();
 }
@@ -190,6 +208,10 @@ function manageKeyEvents() {
             onKeyRightIsDown();
         } else {
             mySprite.velocity.x = 0;
+        }
+
+        if (keyIsDown(KEY.X)) {
+            onKeyXIsDown();
         }
     }
 
@@ -307,6 +329,21 @@ function onKeyRightIsDown() {
         mySprite.velocity.x = PLAYER_SPEED_X;
     }
 }
+
+function onKeyXIsDown() {
+    // Fireh !
+    if (tickCount - rocketFireTimestamp > PLAYER_ROCKET_COOLDOWN) {
+        console.log("FIREH !");
+        rocketFireTimestamp = tickCount;
+
+        var rocket = createSprite(mySprite.position.x + ((mySprite.width / 2 + rocketImage.width) * spriteOrientation), mySprite.position.y);
+        rocket.addImage(rocketImage);
+        rocket.velocity.x = PLAYER_ROCKET_SPEED * spriteOrientation;
+
+        myRockets.add(rocket)
+    }
+}
+
 function manageSpriteDirection() {
     // Other players
     for (var i = 0; i < otherPlayerSprites.length; i++) {
@@ -336,6 +373,22 @@ function onCollideBounds(playerSprite) {
     playerSprite.velocity.x = Math.round(playerSprite.velocity.x);
     playerSprite.position.x = Math.round(playerSprite.position.x);
     playerSprite.position.y = Math.round(playerSprite.position.y);
+}
+
+function onRocketHit(myRocket, otherPlayer) {
+    console.log("HIT !");
+
+    myRocket.remove();
+
+    redraw();
+}
+
+function onRocketHitGround(myRocket) {
+    console.log("HIT GROUND !");
+
+    myRocket.remove();
+
+    redraw();
 }
 
 function onTick() {
@@ -464,8 +517,8 @@ function movePlayerSpriteAccordingToTheInternet(playerSprite, player) {
 function createPlayerSprite(player) {
     var sprite = createSprite(player.xPos, player.yPos, SPRITE_WIDTH, SPRITE_HEIGHT);
 
-    sprite.addImage(pharah);
-    sprite.setCollider("circle", 0, 0, 30, 30);
+    sprite.addImage(pharahImage);
+    sprite.setCollider("circle", 0, 0, 30);
 
     if (DEBUG) {
         // Maybe usefull when player names come
