@@ -39,7 +39,7 @@ var socket;
 var bounds;
 
 // Keep track of playerSprites throught their sprite
-var playerSprites;
+var otherPlayerSprites;
 
 // Cache the user's sprite for performance
 var mySprite;
@@ -64,7 +64,7 @@ function setup() {
 
     setInterval(onTick, 1000 / LOCAL_TICK);
 
-    playerSprites = new Group();
+    otherPlayerSprites = new Group();
     bounds = new Group();
 
     createWorldBounds();
@@ -129,7 +129,11 @@ function draw() {
     manageKeyEvents();
     manageSpriteDirection();
 
-    playerSprites.collide(bounds, onCollideBounds);
+    otherPlayerSprites.collide(bounds);
+    if (mySprite !== undefined) {
+        mySprite.collide(bounds, onCollideBounds);
+    }
+
 
     drawSprites();
 }
@@ -395,8 +399,8 @@ function refreshUiWithServerInformations(playerList) {
         var player = playerList[i];
 
         var found = false;
-        for (var j = 0; j < playerSprites.length; j++) {
-            var playerSprite = playerSprites[j];
+        for (var j = 0; j < otherPlayerSprites.length; j++) {
+            var playerSprite = otherPlayerSprites[j];
 
             if (playerSprite.label === player.id) {
                 // We found the sprite related to that player, move it !
@@ -405,6 +409,17 @@ function refreshUiWithServerInformations(playerList) {
                 found = true;
 
                 break;
+            }
+        }
+
+        // This is information about our sprite, we are not in the "otherPlayerSprites" collection for performances
+        if (player.id === socket.id) {
+            found = true;
+
+            // Our sprite haven't been created yet
+            if (mySprite === undefined) {
+                createPlayerSprite(player);
+                movePlayerSpriteAccordingToTheInternet(mySprite, player);
             }
         }
 
@@ -471,19 +486,19 @@ function createPlayerSprite(player) {
     sprite.label = player.id;
     sprite.maxSpeed = PLAYER_MAX_SPEED;
 
-    // Store the sprite to use it after
-    playerSprites.add(sprite);
-
     // Cache player own sprite for performance
     if (player.id === socket.id) {
         mySprite = sprite;
+    } else {
+        // Store the sprite to use it after
+        otherPlayerSprites.add(sprite);
     }
 }
 
 function getSpriteForPlayerId(playerId) {
-    for (var i = 0; i < playerSprites.length; i++) {
-        if (playerSprites[i].label === playerId) {
-            return playerSprites[i];
+    for (var i = 0; i < otherPlayerSprites.length; i++) {
+        if (otherPlayerSprites[i].label === playerId) {
+            return otherPlayerSprites[i];
         }
     }
 
