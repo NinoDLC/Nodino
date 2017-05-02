@@ -21,6 +21,9 @@ const PLAYER_CANNONBALL_MAXIMUM_ATTEMPT = 2; // if the player starts cannonball 
 const PLAYER_ROCKET_SPEED = 8;
 const PLAYER_ROCKET_COOLDOWN = LOCAL_TICK * 2 / 3; // 0.66 second
 
+// Store canvas reference for centering when window is resized
+var canvas;
+
 // Sprite image POC
 var pharahImage;
 
@@ -73,7 +76,8 @@ function preload() {
 }
 
 function setup() {
-    createCanvas(GAME_WIDTH, GAME_HEIGHT);
+    canvas = createCanvas(GAME_WIDTH, GAME_HEIGHT);
+    centerCanvas();
     background(51);
     frameRate(60);
 
@@ -93,6 +97,12 @@ function setup() {
     socket.on('player_connected', onPlayerConnected);
     socket.on('player_disconnected', onPlayerDisconnected);
     socket.on('down', refreshUiWithServerInformations);
+}
+
+function centerCanvas() {
+    var x = (windowWidth - width) / 2;
+    var y = (windowHeight - height) / 2;
+    canvas.position(x, y);
 }
 
 function createWorldBounds() {
@@ -124,7 +134,7 @@ function createWorldBounds() {
 }
 
 function windowResized() {
-    resizeCanvas(GAME_WIDTH, GAME_HEIGHT);
+    centerCanvas();
     background(51);
 }
 
