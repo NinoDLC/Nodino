@@ -118,7 +118,134 @@ const COLORS = [
     {name: "darkgray", r: 169, g: 169, b: 169},
     {name: "gray", r: 128, g: 128, b: 128}];
 
+const ADJECTIVES = [
+    "hysterical",
+    "spidery",
+    "sleepless",
+    "fractured",
+    "benighted",
+    "proven",
+    "barbed",
+    "sacrificed",
+    "disreputable",
+    "rancid",
+    "unspoken",
+    "stunned",
+    "immobilized",
+    "querulous",
+    "murdering",
+    "congratulating",
+    "deprived",
+    "foreign",
+    "filthy",
+    "spitfire",
+    "primitive",
+    "craggy",
+    "disobeyed",
+    "unintelligible",
+    "embarrassed",
+    "waving",
+    "rotting",
+    "oak",
+    "unseeing",
+    "loyal",
+    "vile",
+    "dour",
+    "swelling",
+    "flexible",
+    "bloodless",
+    "splashed",
+    "sketched",
+    "emblazoned",
+    "studded",
+    "barren",
+    "screeching",
+    "emerging",
+    "drafty",
+    "flaming",
+    "flooded",
+    "pathless",
+    "absent",
+    "drowsy",
+    "gripping",
+    "engrossed",
+    "shaky"];
+
+const NAMES = [
+    "goatskin",
+    "wealth",
+    "troll",
+    "serpent",
+    "drunk",
+    "sapphire",
+    "cleaver",
+    "chariot",
+    "wizard",
+    "pilgrim",
+    "carrot",
+    "husband",
+    "catastrophe",
+    "complexity",
+    "barbarian",
+    "incantation",
+    "combat",
+    "stewardship",
+    "soup",
+    "empire",
+    "parasite",
+    "darkling",
+    "sloth",
+    "bears",
+    "menfolk",
+    "dragon",
+    "sausage",
+    "splinter",
+    "honeysuckle",
+    "moonbeams",
+    "beast",
+    "informer",
+    "bodyguard",
+    "trappings",
+    "humanitarian",
+    "knife",
+    "threshold",
+    "throne",
+    "shaman",
+    "hostility",
+    "dignity",
+    "drapery",
+    "spittle",
+    "priestess",
+    "walnut",
+    "plague",
+    "twig",
+    "devotion",
+    "scribe",
+    "humans",
+    "rival",
+    "weapon",
+    "curses",
+    "hierarchy",
+    "enemies",
+    "nobleman",
+    "weapon",
+    "mistress",
+    "nostril",
+    "fortune",
+    "obscenity",
+    "partridge",
+    "tapestries",
+    "putrescence",
+    "gossipmonger",
+    "orb",
+    "haze",
+    "provision",
+    "shackle"
+];
+
 const COLOR_LENGTH = COLORS.length;
+const ADJECTIVE_LENGTH = ADJECTIVES.length;
+const NAME_LENGTH = NAMES.length;
 
 const GAME_WIDTH = 800;
 const SPAWNING_ZONE_MARGIN = 150;
@@ -135,9 +262,19 @@ var getPlayerColor = function () {
     return COLORS[Math.floor(Math.random() * COLOR_LENGTH)];
 };
 
+/**
+ * Return a randomized name with a set color
+ *
+ * @returns {String}
+ */
+var getPlayerName = function (colorName) {
+    return ADJECTIVES[Math.floor(Math.random() * ADJECTIVE_LENGTH)] + " " + colorName + " " + NAMES[Math.floor(Math.random() * NAME_LENGTH)];
+};
+
 module.exports = {
     GAME_WIDTH: GAME_WIDTH,
     SPAWNING_ZONE_MARGIN: SPAWNING_ZONE_MARGIN,
     SERVER_TICK: SERVER_TICK,
-    getPlayerColor: getPlayerColor
+    getPlayerColor: getPlayerColor,
+    getPlayerName: getPlayerName
 };

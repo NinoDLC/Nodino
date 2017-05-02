@@ -55,6 +55,8 @@ function onPlayerConnected(io, socket) {
     var xSpawn = Math.floor(Math.min(Math.max(consts.SPAWNING_ZONE_MARGIN, Math.random() * consts.GAME_WIDTH), consts.GAME_WIDTH - consts.SPAWNING_ZONE_MARGIN));
     // Randomize its color
     var playerColor = consts.getPlayerColor();
+    // Randomize a funny name with that color
+    var playerName = consts.getPlayerName(playerColor);
 
     playerList.push({
         id: socket.id,
